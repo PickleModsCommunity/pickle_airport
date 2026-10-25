@@ -16,6 +16,7 @@ end
 
 function PermissionCheck(perm)
     local job = ESX.GetPlayerData().job
+    if not job then return false end
     if (perm == "flight") then 
         return (job.name == "airport")
     elseif (perm == "hangar") then 

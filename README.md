@@ -23,7 +23,7 @@ With this resource, you will be able to do the following:
 
 - ESX 1.1+ & Legacy
 - QBCore
-- Standalone
+- Custom adapters require implementing all bridge functions; standalone operation is not included.
 
 ## What do I need?
 

@@ -1,3 +1,4 @@
+local MissionGeneration=0
 local MissionIndex, MissionAircraft, MissionBlip = nil, nil, nil
 
 function SetMissionBlip(coords, blipType)
@@ -18,11 +19,13 @@ function SetMissionBlip(coords, blipType)
 end
 
 function DeliveryMission(index, cb)
+    local generation, aircraft = MissionGeneration, MissionAircraft
     local mission = Config.Missions.Sequences[index]
     local boxProp = nil
 
     local function Cleanup()
-        SetMissionBlip()
+        if generation == MissionGeneration then SetMissionBlip() end
+        if DoesEntityExist(aircraft) then FreezeEntityPosition(aircraft,false) end
 
         if boxProp then
             local ped = PlayerPedId()
@@ -38,8 +41,8 @@ function DeliveryMission(index, cb)
         ShowNotification(U.package_pickup_notify)
         SetMissionBlip(mission.PackagePickup, "PackagePickup")
         
-        while index == MissionIndex and not done do 
-            if (not DoesEntityExist(MissionAircraft) or GetEntityHealth(MissionAircraft) <= 0) then 
+        while generation == MissionGeneration and index == MissionIndex and not done do
+            if (not DoesEntityExist(aircraft) or GetEntityHealth(aircraft) <= 0) then
                 Cleanup()
                 cb(false)
                 return
@@ -58,6 +61,7 @@ function DeliveryMission(index, cb)
                 end
             end
             Wait(wait)
+            if generation ~= MissionGeneration then Cleanup(); return end
         end
        
         if (not done) then 
@@ -70,8 +74,8 @@ function DeliveryMission(index, cb)
         ShowNotification(U.package_dropoff_notify)
         SetMissionBlip(mission.PackageDropoff, "PackageDropoff")
 
-        while index == MissionIndex and not done do 
-            if (not DoesEntityExist(MissionAircraft) or GetEntityHealth(MissionAircraft) <= 0) then 
+        while generation == MissionGeneration and index == MissionIndex and not done do
+            if (not DoesEntityExist(aircraft) or GetEntityHealth(aircraft) <= 0) then
                 Cleanup()
                 cb(false)
                 return
@@ -81,7 +85,7 @@ function DeliveryMission(index, cb)
             local ped = PlayerPedId()
             local coords = mission.PackageDropoff
             local pcoords = GetEntityCoords(ped)
-            local acoords = GetEntityCoords(MissionAircraft)
+            local acoords = GetEntityCoords(aircraft)
             local dist = #(coords - pcoords)
             local adist = #(coords - acoords)
             local vehicle = GetVehiclePedIsIn(ped)
@@ -93,6 +97,7 @@ function DeliveryMission(index, cb)
                 if not IsEntityPlayingAnim(ped, "anim@heists@box_carry@", "idle", 13) then 
                     PlayAnim(ped, "anim@heists@box_carry@", "idle", -8.0, 8.0, -1, 49, 1.0)
                     Wait(10)
+            if generation ~= MissionGeneration then Cleanup(); return end
                 end
                 if (not boxProp) then
                     local bone = GetPedBoneIndex(ped, 60309)
@@ -109,6 +114,7 @@ function DeliveryMission(index, cb)
                 end
             end
             Wait(wait)
+            if generation ~= MissionGeneration then Cleanup(); return end
         end
         
         Cleanup()
@@ -118,12 +124,14 @@ function DeliveryMission(index, cb)
 end
 
 function PassengerMission(index, cb)
+    local generation, aircraft = MissionGeneration, MissionAircraft
     local mission = Config.Missions.Sequences[index]
     local peds = {}
-    local seats = GetVehicleModelNumberOfSeats(GetEntityModel(MissionAircraft)) - 2
+    local seats = GetVehicleModelNumberOfSeats(GetEntityModel(aircraft)) - 2
 
     local function Cleanup()
-        SetMissionBlip()
+        if generation == MissionGeneration then SetMissionBlip() end
+        if DoesEntityExist(aircraft) then FreezeEntityPosition(aircraft,false) end
         for i=1, #peds do 
             DeleteEntity(peds[i])
         end
@@ -134,8 +142,8 @@ function PassengerMission(index, cb)
         ShowNotification(U.passenger_pickup_notify)
         SetMissionBlip(mission.PassengerPickup, "PassengerPickup")
         
-        while index == MissionIndex and not done do 
-            if (not DoesEntityExist(MissionAircraft) or GetEntityHealth(MissionAircraft) <= 0) then 
+        while generation == MissionGeneration and index == MissionIndex and not done do
+            if (not DoesEntityExist(aircraft) or GetEntityHealth(aircraft) <= 0) then
                 Cleanup()
                 cb(false)
                 return
@@ -154,22 +162,24 @@ function PassengerMission(index, cb)
                 end
             end
             Wait(wait)
+            if generation ~= MissionGeneration then Cleanup(); return end
         end
 
         if (done) then 
             ShowNotification(U.passenger_loading)
-            FreezeEntityPosition(MissionAircraft, true)
-            local vehicle = MissionAircraft
+            FreezeEntityPosition(aircraft, true)
+            local vehicle = aircraft
             local coords = mission.PassengerPickup
-            for i=1, seats do 
+            for i=0, seats do
                 if IsVehicleSeatFree(vehicle, i) then 
                     local ped = CreateNPC(`g_m_m_armboss_01`, coords.x, coords.y, coords.z + 100.0, 0.0, true, true)
                     peds[#peds + 1] = ped
                     TaskWarpPedIntoVehicle(ped, vehicle, i)
                     Wait(1000)
+            if generation ~= MissionGeneration then Cleanup(); return end
                 end
             end
-            FreezeEntityPosition(MissionAircraft, false)
+            FreezeEntityPosition(aircraft, false)
         else
             Cleanup()
             cb(false)
@@ -181,8 +191,8 @@ function PassengerMission(index, cb)
         ShowNotification(U.passenger_dropoff_notify)
         SetMissionBlip(mission.PassengerDropoff, "PassengerDropoff")
 
-        while index == MissionIndex and not done do 
-            if (not DoesEntityExist(MissionAircraft) or GetEntityHealth(MissionAircraft) <= 0) then 
+        while generation == MissionGeneration and index == MissionIndex and not done do
+            if (not DoesEntityExist(aircraft) or GetEntityHealth(aircraft) <= 0) then
                 Cleanup()
                 cb(false)
                 return
@@ -192,11 +202,11 @@ function PassengerMission(index, cb)
             local ped = PlayerPedId()
             local coords = mission.PassengerDropoff
             local pcoords = GetEntityCoords(ped)
-            local acoords = GetEntityCoords(MissionAircraft)
+            local acoords = GetEntityCoords(aircraft)
             local dist = #(coords - pcoords)
             local adist = #(coords - acoords)
             local vehicle = GetVehiclePedIsIn(ped)
-            if (vehicle == MissionAircraft and dist < 20 and adist < 40) then 
+            if (vehicle == aircraft and dist < 20 and adist < 40) then
                 wait = 0
                 DrawMarker(2, coords.x, coords.y, coords.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.75, 0.75, 0.75, 255, 255, 255, 127, false, true)
                 if (dist < 1.25 and not ShowHelpNotification(U.passenger_dropoff) and IsControlJustPressed(1, 51)) then
@@ -205,17 +215,19 @@ function PassengerMission(index, cb)
                 end
             end
             Wait(wait)
+            if generation ~= MissionGeneration then Cleanup(); return end
         end
 
         if (done) then 
             ShowNotification(U.passenger_unloading)
-            FreezeEntityPosition(MissionAircraft, true)
-            local vehicle = MissionAircraft
+            FreezeEntityPosition(aircraft, true)
+            local vehicle = aircraft
             for i=1, #peds do 
                 DeleteEntity(peds[i])
                 Wait(1000)
+            if generation ~= MissionGeneration then Cleanup(); return end
             end
-            FreezeEntityPosition(MissionAircraft, false)
+            FreezeEntityPosition(aircraft, false)
             Cleanup()
         else
             Cleanup()
@@ -229,12 +241,18 @@ function PassengerMission(index, cb)
 end
 
 function StopMission()
+    MissionGeneration=MissionGeneration+1
+    TriggerServerEvent("pickle_airport:cancelMission")
+    if MissionAircraft and DoesEntityExist(MissionAircraft) then FreezeEntityPosition(MissionAircraft,false) end
     MissionIndex = nil
     MissionAircraft = nil
     SetMissionBlip()
 end
 
 function StartMission(Type)
+    local eligible={}
+    for i,cfg in ipairs(Config.Missions.Sequences) do if not Type or cfg.Type==Type then eligible[#eligible+1]=i end end
+    if #eligible==0 then ShowNotification('There are no missions for this category.'); return end
     local vehicle = (Config.MissionCommand and GetCurrentAircraft() or nil)
     if MissionIndex == nil then 
         if not vehicle then 
@@ -249,25 +267,18 @@ function StartMission(Type)
                 return
             end
         end
-        local index = GetRandomInt(1, #Config.Missions.Sequences)
-        if Type then 
-            for i=1, 10 do 
-                if Config.Missions.Sequences[index].Type ~= Type then
-                    index = GetRandomInt(1, #Config.Missions.Sequences)
-                else
-                    break
-                end
-            end
-            if Config.Missions.Sequences[index].Type ~= Type then 
-                ShowNotification("There are no missions for this category.")
-                return
-            end
-        end
+        local index=eligible[GetRandomInt(1,#eligible)]
+        local allowed=promise.new()
+        ServerCallback('pickle_airport:beginMission',function(ok) allowed:resolve(ok) end,index)
+        if not Citizen.Await(allowed) then return end
+        MissionGeneration=MissionGeneration+1
+        local generation=MissionGeneration
         MissionIndex = index
         MissionAircraft = vehicle
         local mission = Config.Missions.Sequences[MissionIndex]
         if (mission.Type == "Delivery") then 
             DeliveryMission(MissionIndex, function(result)
+                if generation~=MissionGeneration then return end
                 if result then
                     ShowNotification("Mission completed!")
                     TriggerServerEvent("pickle_airport:finishedMission", MissionIndex)
@@ -278,6 +289,7 @@ function StartMission(Type)
             end)
         elseif (mission.Type == "Passenger") then 
             PassengerMission(MissionIndex, function(result)
+                if generation~=MissionGeneration then return end
                 if result then
                     ShowNotification("Mission completed!")
                     TriggerServerEvent("pickle_airport:finishedMission", MissionIndex)
