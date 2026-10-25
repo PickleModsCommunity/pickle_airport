@@ -17,8 +17,10 @@ client_scripts {
 
 server_scripts {
 	"bridge/**/server.lua",
+    "core/authority.lua",
 	"modules/**/server.lua",
     "core/server.lua"
 }
 
+dependencies { 'ox_lib', '/onesync' }
 lua54 'yes'

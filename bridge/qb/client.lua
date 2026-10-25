@@ -26,6 +26,7 @@ end)
 
 function PermissionCheck(perm)
     local job = QBCore.Functions.GetPlayerData().job
+    if not job then return false end
     if (perm == "flight") then 
         return (job.name == "airport")
     elseif (perm == "hangar") then 
@@ -36,7 +37,3 @@ function PermissionCheck(perm)
         return (job.name == "airport" or job.name == "police")
     end
 end
-
-RegisterNetEvent(GetCurrentResourceName()..":showNotification", function(text)
-    ShowNotification(text)
-end)
